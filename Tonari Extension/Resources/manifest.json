@@ -33,6 +33,5 @@
         "default_icon": "images/toolbar-icon.svg"
     },
 
-    "permissions": [ "storage" ],
-    "host_permissions": [ "http://localhost:8000/*" ]
+    "permissions": [ "storage", "nativeMessaging" ]
 }

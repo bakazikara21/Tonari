@@ -8,3 +8,6 @@ build/
 
 # エディタの個人設定
 .vscode/
+
+# 実機用の中継サーバーの接続先(Mac ごとに違う。scripts/use-this-mac.sh で作る)
+Shared/LocalServer.plist

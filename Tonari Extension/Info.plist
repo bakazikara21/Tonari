@@ -9,5 +9,14 @@
 		<key>NSExtensionPrincipalClass</key>
 		<string>$(PRODUCT_MODULE_NAME).SafariWebExtensionHandler</string>
 	</dict>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<!-- 開発中は Mac の中継サーバー(http://localhost や http://○○.local)に案内を問い合わせるため、ローカルだけ http を許可する -->
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<!-- 実機で、同じ Wi-Fi にある Mac の中継サーバーにつなぐときに iOS が出す確認の文 -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>案内を表示するために、同じ Wi-Fi にあるパソコンにつなぎます。</string>
 </dict>
 </plist>

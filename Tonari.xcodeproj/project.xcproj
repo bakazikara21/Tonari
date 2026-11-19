@@ -28,6 +28,7 @@
     },
     { "kind": "folder", "path": "TonariTests", "target-membership": [ "TonariTests" ] },
     { "kind": "folder", "path": "TonariUITests", "target-membership": [ "TonariUITests" ] },
+    { "kind": "folder", "path": "Shared", "target-membership": [ "Tonari", "Tonari Extension" ] },
     {
       "kind": "folder",
       "path": "Tonari Extension",
