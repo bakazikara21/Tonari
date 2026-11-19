@@ -9,9 +9,12 @@
 	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<!-- 開発中は Mac の中継サーバー(http://127.0.0.1 など)を表示するため、ローカルだけ http を許可する -->
+		<!-- 開発中は Mac の中継サーバー(http://localhost や http://○○.local)を表示するため、ローカルだけ http を許可する -->
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<!-- 実機で、同じ Wi-Fi にある Mac の中継サーバーにつなぐときに iOS が出す確認の文 -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>おすすめや案内を表示するために、同じ Wi-Fi にあるパソコンにつなぎます。</string>
 </dict>
 </plist>

@@ -5,16 +5,10 @@
 
 import Foundation
 
-/// アプリの設定。中継サーバーの URL はここだけで決める。
+/// アプリの設定。中継サーバーの接続先は Shared/ServerConfig.swift で決める(拡張機能と共通)。
 enum AppConfig {
-    /// 中継サーバーの URL。変更するときはここだけを書き換える。
-    /// シミュレータからは Mac の中継サーバーにそのままつながる(server フォルダの uvicorn)。
-    static let serverBaseURL: URL = {
-        guard let url = URL(string: "http://127.0.0.1:8000") else {
-            preconditionFailure("中継サーバーの URL が正しくありません")
-        }
-        return url
-    }()
+    /// 中継サーバーの URL
+    static var serverBaseURL: URL { ServerConfig.baseURL }
 
     /// 中継サーバーのページの URL
     static func url(for page: ServerPage) -> URL {

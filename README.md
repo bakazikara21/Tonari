@@ -10,10 +10,19 @@ Safari Web 拡張機能が今のページを見て、「次の1手順」と「�
 | `Tonari/` | iPhone アプリ本体(SwiftUI) |
 | `Tonari Extension/` | Safari Web 拡張機能 |
 | `TonariTests/` | アプリと拡張機能スクリプトのテスト |
+| `Shared/` | アプリと拡張機能の両方で使うコード(中継サーバーの接続先) |
 | `server/` | 中継サーバー(FastAPI)。Gemini(Vertex AI)への問い合わせ・お勧め機能・今日の気温の取得(Open-Meteo) |
+| `scripts/` | 開発用のスクリプト |
 
-アプリと拡張機能は、Mac で動く中継サーバー(`http://localhost:8000`)に接続します。
+アプリと拡張機能は、Mac で動く中継サーバーに接続します。
 Gemini の認証情報は中継サーバーだけに置き、アプリや拡張機能には入れません。
+
+接続先は `Shared/ServerConfig.swift` の1か所だけで決めます。
+
+- シミュレータ: `http://localhost:8000`(シミュレータは Mac のネットワークをそのまま使うので、Mac 自身につながる)
+- 実機の iPhone: 同じ Wi-Fi にある Mac の `http://○○.local:8000`([3. 実機の iPhone で動かす](#3-実機の-iphone-で動かす) を参照)
+
+拡張機能は中継サーバーと直接通信しません。拡張機能のネイティブ側(`Tonari Extension/SafariWebExtensionHandler.swift`)に頼んで問い合わせます。
 
 ## 必要なもの
 
@@ -101,10 +110,39 @@ cd server
 5. シミュレータの Safari で会員登録ページを開くと、右下に「たすけて」ボタンが出ます。
 
 シミュレータからは Mac の `localhost:8000` にそのままつながります。
-接続先を変える場合は、次の2か所を書き換えます。
 
-- アプリ: `Tonari/AppConfig.swift` の `serverBaseURL`
-- 拡張機能: `Tonari Extension/Resources/guide-provider.js` の `SERVER_URL` と、`manifest.json` の `host_permissions`
+## 3. 実機の iPhone で動かす
+
+実機の iPhone では `localhost` は iPhone 自身を指すため、同じ Wi-Fi にある Mac の名前(`○○.local`)でつなぎます。
+Mac と iPhone が同じ Wi-Fi にいて、Mac で中継サーバーが動いている間だけ使えます。
+
+1. Mac の名前を調べて、接続先の設定ファイルを作ります(`Shared/LocalServer.plist`。Mac ごとに違うので Git には入れません)。
+
+   ```sh
+   ./scripts/use-this-mac.sh
+   ```
+
+2. 中継サーバーを、ほかの機器からもつながるように起動します(`--host 0.0.0.0`)。
+   初めてのときに Mac が「受け入れますか」と聞いてきたら「許可」を押します。
+
+   ```sh
+   cd server
+   .venv/bin/uvicorn main:app --reload --host 0.0.0.0 --port 8000
+   ```
+
+   この中継サーバーには、まだログインの仕組みがありません。同じ Wi-Fi にいる人は誰でもつなげるので、
+   自宅など信頼できる Wi-Fi でだけ、この起動方法を使ってください。
+
+3. iPhone を Mac につなぎ、Xcode の実行先に iPhone を選んで ⌘R で実行します。
+4. iPhone で Tonari アプリを開き、「今日のおすすめ」などを開きます。
+   「ローカルネットワーク上のデバイスの検索および接続」の確認が出たら「許可」を押します。
+5. iPhone の「設定」→「アプリ」→「Safari」→「機能拡張」で `Tonari Extension` をオンにし、「すべての Web サイト」を「許可」にします。
+
+つながらないときは、次のことを確かめてください。
+
+- iPhone の「設定」→「プライバシーとセキュリティ」→「ローカルネットワーク」で Tonari がオンか
+- iPhone の Safari で `http://○○.local:8000/settings`(`./scripts/use-this-mac.sh` が表示した URL)が開けるか
+- `Shared/LocalServer.plist` を作ったあとに、ビルドし直したか
 
 ## テスト
 
