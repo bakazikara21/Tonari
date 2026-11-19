@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>お勧めの設定(ご家族用)</title>
+<style>
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        padding: 16px 16px 48px;
+        font-family: -apple-system, "Hiragino Sans", sans-serif;
+        background: #F8FAFC;
+        color: #111;
+        font-size: 18px;
+        line-height: 1.5;
+    }
+    main { max-width: 640px; margin: 0 auto; }
+    h1 { font-size: 26px; margin: 0 0 4px; }
+    .lead { margin: 0 0 16px; color: #444; }
+    fieldset {
+        margin: 0 0 16px;
+        padding: 12px 16px 16px;
+        border: 1px solid #CBD5E1;
+        border-radius: 12px;
+        background: #fff;
+    }
+    legend { font-weight: bold; font-size: 20px; padding: 0 4px; }
+    .hint { margin: 0 0 8px; color: #555; font-size: 16px; }
+    .options { display: flex; flex-wrap: wrap; gap: 8px 16px; }
+    .options label { display: flex; align-items: center; gap: 6px; min-height: 40px; }
+    input[type="checkbox"], input[type="radio"] { width: 22px; height: 22px; }
+    input[type="number"] { font-size: 20px; width: 10em; padding: 8px; }
+    select { font-size: 20px; padding: 8px; }
+    button.save {
+        width: 100%;
+        min-height: 60px;
+        border: none;
+        border-radius: 14px;
+        background: #1F2937;
+        color: #fff;
+        font-size: 22px;
+        font-weight: bold;
+    }
+    .status { min-height: 1.5em; font-weight: bold; }
+    .status.ok { color: #166534; }
+    .status.error { color: #B91C1C; }
+</style>
+</head>
+<body>
+<main>
+    <h1>お勧めの設定</h1>
+    <p class="lead">ご家族の方が設定してください。保存すると、次に「今日のおすすめ」を開いたときから使われます。</p>
+
+    <form class="settings" hidden>
+        <fieldset>
+            <legend>アレルギー</legend>
+            <p class="hint">当てはまるものを全て選んでください。アレルゲンの表示がない品は、いつもお勧めから外します。</p>
+            <div class="options allergies"></div>
+        </fieldset>
+
+        <fieldset>
+            <legend>食事制限</legend>
+            <p class="hint">商品のアレルゲン表示をもとに外します。</p>
+            <div class="options diet"></div>
+        </fieldset>
+
+        <fieldset>
+            <legend>予算の上限</legend>
+            <p class="hint">1品あたりの上限です。空にすると上限なしになります。</p>
+            <label><input type="number" class="budget" min="0" max="100000" step="10" inputmode="numeric"> 円まで</label>
+        </fieldset>
+
+        <fieldset>
+            <legend>住んでいる地域</legend>
+            <p class="hint">今日の気温を調べて、おすすめに使います。気温は都道府県庁所在地のものです。選ばないと、気温は使いません。</p>
+            <select class="region">
+                <option value="">選ばない</option>
+            </select>
+        </fieldset>
+
+        <fieldset>
+            <legend>利用する店舗</legend>
+            <p class="hint">選ばないと、全ての店舗が対象になります。</p>
+            <div class="options stores"></div>
+        </fieldset>
+
+        <fieldset>
+            <legend>同じような品の繰り返しを避ける強さ</legend>
+            <p class="hint">強いほど、前に勧めた品と似た品を勧めにくくなります。一度に並べる5品も、似た品が重なりにくくなります。</p>
+            <div class="options repeat"></div>
+        </fieldset>
+
+        <button class="save" type="submit">保存する</button>
+        <p class="status" role="status"></p>
+    </form>
+    <p class="status error loading-error" role="alert" hidden>設定を読み込めませんでした。サーバーが動いているか確かめてください。</p>
+</main>
+<script>
+// 設定を読み込んで画面に並べ、保存ボタンでサーバーへ送る。
+(() => {
+    "use strict";
+
+    const form = document.querySelector(".settings");
+    const status = form.querySelector(".status");
+
+    // チェックボックス・ラジオボタンを1つ作る(文字は textContent で入れる)
+    function option(type, name, value, label, checked) {
+        const wrapper = document.createElement("label");
+        const input = document.createElement("input");
+        input.type = type;
+        input.name = name;
+        input.value = String(value);
+        input.checked = checked;
+        wrapper.append(input, document.createTextNode(label));
+        return wrapper;
+    }
+
+    function checkedValues(name) {
+        return Array.from(form.querySelectorAll(`input[name="${name}"]:checked`)).map((input) => input.value);
+    }
+
+    function render({ settings, options }) {
+        const allergies = form.querySelector(".allergies");
+        options.allergens.forEach((name) => {
+            allergies.append(option("checkbox", "allergy", name, name, settings.allergies.includes(name)));
+        });
+        const diet = form.querySelector(".diet");
+        options.dietRestrictions.forEach(({ code, label }) => {
+            diet.append(option("checkbox", "diet", code, label, settings.dietRestrictions.includes(code)));
+        });
+        form.querySelector(".budget").value = settings.budgetMax ?? "";
+        const region = form.querySelector(".region");
+        options.regions.forEach((name) => {
+            const item = document.createElement("option");
+            item.value = name;
+            item.textContent = name;
+            region.append(item);
+        });
+        region.value = settings.region ?? "";
+        const stores = form.querySelector(".stores");
+        options.stores.forEach((name) => {
+            stores.append(option("checkbox", "store", name, name, settings.stores.includes(name)));
+        });
+        const repeat = form.querySelector(".repeat");
+        options.repeatAvoidance.forEach(({ value, label }) => {
+            repeat.append(option("radio", "repeat", value, label, value === settings.repeatAvoidance));
+        });
+        form.hidden = false;
+    }
+
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const budget = form.querySelector(".budget").value.trim();
+        const repeat = form.querySelector('input[name="repeat"]:checked');
+        const body = {
+            allergies: checkedValues("allergy"),
+            dietRestrictions: checkedValues("diet"),
+            budgetMax: budget === "" ? null : Number(budget),
+            stores: checkedValues("store"),
+            repeatAvoidance: repeat ? Number(repeat.value) : 0.6,
+            region: form.querySelector(".region").value || null,
+        };
+        status.className = "status";
+        status.textContent = "保存しています…";
+        try {
+            const response = await fetch("/api/settings", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body),
+            });
+            if (!response.ok) throw new Error(`status ${response.status}`);
+            status.className = "status ok";
+            status.textContent = "保存しました。";
+        } catch (error) {
+            status.className = "status error";
+            status.textContent = "保存できませんでした。入力を確かめて、もう一度押してください。";
+        }
+    });
+
+    fetch("/api/settings")
+        .then((response) => {
+            if (!response.ok) throw new Error(`status ${response.status}`);
+            return response.json();
+        })
+        .then(render)
+        .catch(() => { document.querySelector(".loading-error").hidden = false; });
+})();
+</script>
+</body>
+</html>

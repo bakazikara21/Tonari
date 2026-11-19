@@ -1,0 +1,10 @@
+# macOS
+.DS_Store
+
+# Xcode のユーザー別データ・ビルド成果物
+xcuserdata/
+DerivedData/
+build/
+
+# エディタの個人設定
+.vscode/

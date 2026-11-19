@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>にがてな おかし</title>
+<style>
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        padding: 12px 16px 32px;
+        font-family: -apple-system, "Hiragino Sans", sans-serif;
+        background: #FFFDF8;
+        color: #111;
+        -webkit-text-size-adjust: 100%;
+    }
+    main { max-width: 560px; margin: 0 auto; }
+    [hidden] { display: none !important; }
+    .title { margin: 0 0 6px; font-size: 32px; font-weight: bold; line-height: 1.4; }
+    .lead { margin: 0 0 16px; font-size: 22px; line-height: 1.5; color: #444; }
+    /* 分類ごとのプルダウン。見出しを押すと開いたり閉じたりする */
+    .group { margin: 0 0 12px; border: 3px solid #1F2937; border-radius: 18px; background: #fff; }
+    .group summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 72px;
+        padding: 0 16px;
+        font-size: 30px;
+        font-weight: bold;
+        list-style: none;
+        cursor: pointer;
+    }
+    .group summary::-webkit-details-marker { display: none; }
+    .group summary::after { content: "▼"; font-size: 22px; }
+    .group[open] summary::after { content: "▲"; }
+    .group .count { margin-left: auto; margin-right: 12px; font-size: 22px; color: #1F4E79; }
+    .items { display: flex; flex-direction: column; gap: 10px; padding: 0 12px 14px; }
+    /* 苦手を選ぶボタン。押すたびに「にがて」と「にがてではない」が切り替わる */
+    .item {
+        width: 100%;
+        min-height: 68px;
+        padding: 0 16px;
+        border-radius: 18px;
+        border: 3px solid #1F2937;
+        background: #fff;
+        color: #1F2937;
+        font-size: 28px;
+        font-weight: bold;
+        text-align: left;
+    }
+    .item[aria-pressed="true"] { background: #1F4E79; border-color: #1F4E79; color: #fff; }
+    .item .mark { display: inline-block; width: 1.4em; }
+    /* 分類ごと一括で苦手にするチェック。四角の中にチェックマークを出す */
+    .all {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        min-height: 68px;
+        padding: 0 16px;
+        border-radius: 18px;
+        border: 3px dashed #1F4E79;
+        background: #EEF4FA;
+        color: #1F4E79;
+        font-size: 26px;
+        font-weight: bold;
+        text-align: left;
+        white-space: nowrap;   /* 1行で表示する */
+    }
+    .all .box {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border: 3px solid #1F4E79;
+        border-radius: 8px;
+        background: #fff;
+        font-size: 26px;
+        flex-shrink: 0;        /* 文字が長くてもチェック欄はつぶさない */
+    }
+    .all[aria-checked="true"] { border-style: solid; background: #1F4E79; color: #fff; }
+    .all[aria-checked="true"] .box { color: #1F4E79; }
+    .actions { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+    .big {
+        width: 100%;
+        min-height: 80px;
+        border-radius: 18px;
+        font-size: 30px;
+        font-weight: bold;
+        border: 3px solid transparent;
+    }
+    .primary { background: #C2410C; color: #fff; }
+    .secondary { background: #fff; color: #1F2937; border-color: #1F2937; }
+    button:disabled { opacity: 0.5; }
+    .notice { font-size: 24px; line-height: 1.5; color: #9A3412; }
+    .center { text-align: center; margin-top: 15vh; }
+    .done-message { white-space: pre-line; }   /* 文の中の改行で折り返す */
+</style>
+</head>
+<body>
+<main>
+    <!-- 苦手な種類を選ぶ -->
+    <section class="choose" hidden>
+        <p class="title">にがてな おかしを<br>えらんでください</p>
+        <p class="lead">「洋菓子」「和菓子」「フルーツ」を おすと、えらべる ものが でます。
+            えらんだ ものが 入った おかしは、おすすめしません。いくつでも えらべます。
+            「全部 にがて」に チェックを つけると、その なかま 全てを えらべます。</p>
+        <div class="groups"></div>
+        <p class="notice save-error" role="alert" hidden>うまく 記録 できませんでした。もう一度 おしてください。</p>
+        <div class="actions">
+            <button class="big primary save" type="button">これで 記録する</button>
+            <button class="big secondary cancel" type="button">記録せずに やめる</button>
+        </div>
+    </section>
+
+    <!-- 記録したあと / やめたあと -->
+    <section class="done" hidden>
+        <p class="title center done-message"></p>
+        <div class="actions">
+            <!-- 記録し終わったあとだけ出す。アプリの中で開いたときだけ使える(ホーム画面に戻る) -->
+            <button class="big primary close" type="button" hidden>終了する</button>
+            <button class="big secondary again" type="button">えらびなおす</button>
+        </div>
+    </section>
+
+    <p class="notice loading-error" role="alert" hidden>いまは ひらけません。しばらくしてから もう一度 ひらいてください。</p>
+</main>
+<script>
+// 苦手なものを、洋菓子・和菓子・フルーツのプルダウンに分けて選んでもらうページ。
+//  ・選んでいる途中の内容は、このページの中にだけ持ち、送らない。
+//  ・「これで 記録する」を押したときだけ、選んだもの全部をまとめて送る。
+//    途中でやめたり閉じたりすると、前に記録した内容のまま残る。
+//  ・何回でも選び直せる(開くたびに、いま記録されている内容から始める)。
+(() => {
+    "use strict";
+
+    const $ = (selector) => document.querySelector(selector);
+    const choose = $(".choose");
+    const done = $(".done");
+    const saveButton = $(".save");
+    const saveError = $(".save-error");
+    let groups = [];
+    let selected = new Set();   // 選んでいる途中の内容
+
+    function show(section) {
+        for (const element of [choose, done, $(".loading-error")]) element.hidden = element !== section;
+        window.scrollTo(0, 0);
+    }
+
+    function setPressed(button, pressed) {
+        button.setAttribute("aria-pressed", String(pressed));
+        button.querySelector(".mark").textContent = pressed ? "✕" : "";
+    }
+
+    // 見出しに、その分類で選んでいる数を出す(閉じていても分かるように)
+    function updateCount(details, group) {
+        const count = group.items.filter((item) => selected.has(item.code)).length;
+        details.querySelector(".count").textContent =
+            selected.has(group.code) ? "全部 にがて" : count > 0 ? `${count}つ にがて` : "";
+    }
+
+    function setChecked(button, checked) {
+        button.setAttribute("aria-checked", String(checked));
+        button.querySelector(".box").textContent = checked ? "✓" : "";
+    }
+
+    // 分類ごとのプルダウンと、一括のチェック・項目のボタンを並べる(文字は textContent で入れ、HTML として解釈しない)
+    function render() {
+        const container = choose.querySelector(".groups");
+        container.replaceChildren();
+        groups.forEach((group) => {
+            const details = document.createElement("details");
+            details.className = "group";
+            // 選んでいるものがある分類は、開いた状態で始める
+            details.open = selected.has(group.code) || group.items.some((item) => selected.has(item.code));
+            const summary = document.createElement("summary");
+            const label = document.createElement("span");
+            label.textContent = group.label;
+            const count = document.createElement("span");
+            count.className = "count";
+            summary.append(label, count);
+            const items = document.createElement("div");
+            items.className = "items";
+
+            // 分類ごと一括: チェックすると分類と項目を全て苦手にし、外すと全て外す
+            const all = document.createElement("button");
+            all.type = "button";
+            all.className = "all";
+            all.setAttribute("role", "checkbox");
+            const box = document.createElement("span");
+            box.className = "box";
+            box.setAttribute("aria-hidden", "true");
+            // プルダウンの中にあるので分類名は付けず、短くして1行に収める
+            all.append(box, document.createTextNode("全部 にがて"));
+            items.append(all);
+
+            const itemButtons = group.items.map(({ code, label: name }) => {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = "item";
+                const mark = document.createElement("span");
+                mark.className = "mark";
+                mark.setAttribute("aria-hidden", "true");
+                button.append(mark, document.createTextNode(name));
+                button.addEventListener("click", () => {
+                    if (selected.has(code)) {
+                        selected.delete(code);
+                        // 1つでも外したら、分類ごと一括ではなくなる
+                        selected.delete(group.code);
+                    } else {
+                        selected.add(code);
+                    }
+                    refresh();
+                });
+                items.append(button);
+                return { code, button };
+            });
+
+            function refresh() {
+                setChecked(all, selected.has(group.code));
+                itemButtons.forEach(({ code, button }) => setPressed(button, selected.has(code)));
+                updateCount(details, group);
+            }
+
+            all.addEventListener("click", () => {
+                const on = !selected.has(group.code);
+                for (const code of [group.code, ...group.items.map((item) => item.code)]) {
+                    if (on) selected.add(code);
+                    else selected.delete(code);
+                }
+                refresh();
+            });
+
+            details.append(summary, items);
+            refresh();
+            container.append(details);
+        });
+    }
+
+    // いま記録されている内容を読み込んで、選び始める
+    async function start() {
+        try {
+            const response = await fetch("/api/preferences/dislikes");
+            if (!response.ok) throw new Error(`status ${response.status}`);
+            const data = await response.json();
+            groups = data.groups;
+            selected = new Set(data.selected);
+            render();
+            saveError.hidden = true;
+            saveButton.disabled = false;
+            show(choose);
+        } catch (error) {
+            show($(".loading-error"));
+        }
+    }
+
+    // アプリ(Tonari)の中で開いているときだけ、アプリに「閉じて」と知らせられる
+    const appBridge = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.tonari;
+
+    function finish(message, saved) {
+        $(".done-message").textContent = message;
+        $(".close").hidden = !(saved && appBridge);
+        show(done);
+    }
+
+    saveButton.addEventListener("click", async () => {
+        saveButton.disabled = true;
+        saveError.hidden = true;
+        try {
+            const response = await fetch("/api/preferences/dislikes", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ categories: Array.from(selected) }),
+            });
+            if (!response.ok) throw new Error(`status ${response.status}`);
+            finish("記録 しました。\nありがとう ございました。", true);
+        } catch (error) {
+            saveError.hidden = false;
+            saveButton.disabled = false;
+        }
+    });
+
+    // やめる: 選んでいる途中の内容は捨て、前に記録した内容のまま残す
+    $(".cancel").addEventListener("click", () => {
+        selected = new Set();
+        finish("記録 しませんでした。\nまえの ままです。", false);
+    });
+    $(".again").addEventListener("click", start);
+    // 終了する: アプリに知らせて、この画面を閉じてホーム画面に戻る
+    $(".close").addEventListener("click", () => appBridge.postMessage("close"));
+
+    start();
+})();
+</script>
+</body>
+</html>
