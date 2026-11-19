@@ -163,7 +163,7 @@ Gemini は、オーナーの Google Cloud プロジェクトを使います。
 | 症状 | 原因と対処 |
 | --- | --- |
 | `PERMISSION_DENIED`(403) | 権限の反映に数分かかることがあります。少し待っても直らなければ、手順 4 で別の Google アカウントでログインしていないか確かめてください |
-| `serviceusage.services.use` が足りないというエラー | 手順 4 の `set-quota-project` を実行したか確かめてください |
+| `serviceusage.services.use` が足りないというエラー | オーナーに「Service Usage ユーザー」(`roles/serviceusage.serviceUsageConsumer`)の権限も付けてもらい、数分待ってから手順 4 の `set-quota-project` を実行し直してください |
 
 Gemini を使えない間も、画面づくり・拡張機能の安全対策・設定画面・テストの作業はできます。
 その場合は `server/.env` の `GOOGLE_CLOUD_PROJECT` を仮の値(`dummy` など)にすれば中継サーバーは起動します
